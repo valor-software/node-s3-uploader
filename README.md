@@ -1,16 +1,29 @@
-AWS S3 Image Uploader [![Build Status](https://drone.io/github.com/Turistforeningen/node-s3-uploader/status.png)](https://drone.io/github.com/Turistforeningen/node-s3-uploader/latest)
+AWS S3 Image Uploader (EXTENDED)
 =====================
 
+Based on:
+
 [![NPM](https://nodei.co/npm/s3-uploader.png?downloads=true)](https://www.npmjs.org/package/s3-uploader)
+
 
 Flexible and efficient resize, rename, and upload images to Amazon S3 disk
 storage. Uses the official [AWS Node SDK](http://aws.amazon.com/sdkfornodejs/)
 and [GM](https://github.com/aheckmann/gm) for image processing.
 
+## Package.json
+
+```javascript
+  "dependencies": {
+    // [...]
+    "node-s3-uploader": "git+https://github.com/valor-software/node-s3-uploader",
+    // [...]
+  }
+```
+
 ## Install
 
 ```
-npm install s3-uploader --save
+npm install node-s3-uploader --save
 ```
 
 ## Requirements
@@ -20,6 +33,20 @@ npm install s3-uploader --save
 * AWS credentials environment variables
   * `AWS_ACCESS_KEY_ID`
   * `AWS_SECRET_ACCESS_KEY`
+
+```
+npm install imagemagic --save
+npm install aws-sdk --save
+```
+
+```javascript
+  var AWS = require('aws-sdk');
+  var AWS_ACCESS_KEY_ID = 'AWS_ACCESS_KEY_ID';
+  var AWS_SECRET_ACCESS_KEY = 'AWS_SECRET_ACCESS_KEY';
+  var AWS_REGION = 'AWS_REGION';
+
+  AWS.config.update({accessKeyId: AWS_ACCESS_KEY_ID, secretAccessKey: AWS_SECRET_ACCESS_KEY, region: AWS_REGION});
+```
 
 ## API
 
@@ -40,10 +67,13 @@ var Upload = require('s3-uploader');
   * `boolean` returnExif - return exif data for original image
   * `string` tmpDir - directory to store temporary files
   * `number` asyncLimit - limit number of async workers
+  * `function` getRandomPath - function for generating filepath (for s3)
   * `object[]` versions - versions to upload to S3
     * `boolean` original - if this is the original image
     * `string` suffix - this is appended to the file name
     * `number` quality - resized image quality
+    * `string` formatSuffix - suffix for format (e.g. jpg.orig)
+    * `string` format - new format fro image (e.g. jpg, png, etc)
     * `number` maxWidth - max width for resized image
     * `number` maxHeight - max height for resized image
 
@@ -78,6 +108,7 @@ var client = new Upload('my_s3_bucket', {
 
 * `string` src - absolute path to source image to upload
 * `object` opts - local upload config options (overwrites global config)
+  * `object` file - original image object (e.g. for getRandomPath function where original filename could be used)
 * `function` cb - callback function (`Error` err, `object[]` versions, `object` meta)
   * `Error` err - `null` if everything went fine
   * `object[]` versions - original and resized images with path/location

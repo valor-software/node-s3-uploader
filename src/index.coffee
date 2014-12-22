@@ -1,4 +1,5 @@
-S3 = require('aws-sdk').S3
+AWS = require('aws-sdk')
+S3 = AWS.S3
 fs = require 'fs'
 gm = require('gm').subClass imageMagick: true
 async = require 'async'
@@ -8,6 +9,8 @@ rand = require('crypto').pseudoRandomBytes
 
 Upload = module.exports = (awsBucketName, opts) ->
   throw new Error 'Bucket name can not be undefined' if not awsBucketName
+
+  AWS.config.update(opts);
 
   @s3 = new S3
     region: opts?.awsBucketRegion or 'us-east-1'
@@ -22,6 +25,8 @@ Upload = module.exports = (awsBucketName, opts) ->
   @awsBucketUrl = "https://s3-#{opts?.awsBucketRegion or 'us-east-1'}.amazonaws.com/#{awsBucketName}/"
   @awsBucketAcl = opts?.awsBucketAcl or 'privat'
 
+  @file = null
+
   @resizeQuality = opts?.resizeQuality or 70
   @returnExif = opts?.returnExif or false
   @tmpDir = (opts?.tmpDir or require('os').tmpdir()) + '/'
@@ -29,18 +34,18 @@ Upload = module.exports = (awsBucketName, opts) ->
 
   @asyncLimit = opts?.asyncLimit or 2
 
+  @_getRandomPath = opts?.getRandomPath or ->
+    input = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+    res = []
+
+    for i in [1..3]
+      x = input[Math.floor((Math.random() * input.length))]
+      y = input[Math.floor((Math.random() * input.length))]
+      res.push x + y
+
+    return @awsBucketPath + res.join '/'
+
   @
-
-Upload.prototype._getRandomPath = ->
-  input = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-  res = []
-
-  for i in [1..3]
-    x = input[Math.floor((Math.random() * input.length))]
-    y = input[Math.floor((Math.random() * input.length))]
-    res.push x + y
-
-  return @awsBucketPath + res.join '/'
 
 Upload.prototype._uploadPathIsAvailable = (path, callback) ->
   @s3.listObjects Prefix: path, (err, data) ->
@@ -48,12 +53,13 @@ Upload.prototype._uploadPathIsAvailable = (path, callback) ->
     return callback null, path, data.Contents.length is 0
 
 Upload.prototype._uploadGeneratePath = (callback) ->
-  @._uploadPathIsAvailable this._getRandomPath(), (err, path, avaiable) ->
+  @._uploadPathIsAvailable @_getRandomPath(), (err, path, avaiable) ->
     return callback err if err
     return callback new Error "Path '#{path}' not avaiable!" if not avaiable
     return callback null, path
 
 Upload.prototype.upload = (src, opts, cb) ->
+  @file = opts?.file or null
   @_uploadGeneratePath (err, dest) =>
     return cb err if err
     new Image(src, dest, opts, @).exec cb
@@ -96,16 +102,18 @@ Image.prototype.makeMpc = (cb) ->
     return cb null
 
 Image.prototype.resize = (version, cb) ->
+
+  version.format = (version?.format or @meta.format)
+  version.format += '.' + version.formatSuffix if version.formatSuffix
+
   if version.original
     version.src = @src
-    version.format = @meta.format
     version.size = @meta.fileSize
     version.width = @meta.imageSize.width
     version.height = @meta.imageSize.height
 
     return process.nextTick -> cb null, version
 
-  version.format = 'jpeg'
   version.src = [
     @config.tmpDir
     @config.tmpPrefix
