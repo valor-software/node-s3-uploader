@@ -1,3 +1,0 @@
-pre-commit:
-  npm run prepublish
-  git add lib/
