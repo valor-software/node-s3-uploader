@@ -141,6 +141,16 @@ Where A is the original image uploaded by the user. An mpc image is created, B,
 which is used to crate the thumbnails C, D, and E.
 ```
 
+## Customization lib
+
+Create file [project_dir]/.git/hook/pre-commit and add there:
+
+```
+npm run prepublish
+git add lib/
+```
+
+
 ## Lisence
 
 [MIT](https://github.com/Turistforeningen/node-s3-uploader/blob/master/LICENSE)
