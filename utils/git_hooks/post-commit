@@ -1,0 +1,7 @@
+#!/bin/sh
+
+exec npm run prepublish
+exec git add lib/
+exec git commit -m "post-commit # rebuild js lib"
+
+exit
